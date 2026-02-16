@@ -5,6 +5,7 @@ import { EdgeOverlay } from './EdgeOverlay';
 import { GridOverlay } from './GridOverlay';
 import { VisionService } from '../services/VisionService';
 import { useCameraFrames } from '../hooks/useCameraFrames';
+import { unlockAudio } from '../utils/audioUnlock';
 import type { ProcessedFrame } from '../services/VisionService';
 
 interface CameraWithFramesProps {
@@ -67,6 +68,7 @@ export function CameraWithFrames({
       setGrid(null);
       onVisionActiveChange?.(false);
     } else {
+      unlockAudio(); // Unlock audio on first tap (mobile web)
       start();
       setCaptureActive(true);
       onVisionActiveChange?.(true);

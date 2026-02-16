@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
 import { Platform } from 'react-native';
 import type { NoteSequence } from '../types';
+import { unlockAudio } from '../utils/audioUnlock';
 
 /** Default BPM for the step sequencer */
 const DEFAULT_BPM = 120;
@@ -11,10 +12,10 @@ const SEQUENCE_STEPS = 16;
 /** Subdivision for 16th notes */
 const SUBDIVISION = '16n';
 
-/** Create AudioContext: native browser on web (Tone.js compatible), react-native-audio-api on mobile */
+/** Create AudioContext - web uses browser API, native uses react-native-audio-api */
 function createAudioContext(): globalThis.AudioContext {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const AC = globalThis.AudioContext || (globalThis as unknown as { webkitAudioContext: typeof globalThis.AudioContext }).webkitAudioContext;
+    const AC = globalThis.AudioContext || (globalThis as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     return new AC();
   }
   const { AudioContext } = require('react-native-audio-api');
@@ -34,16 +35,18 @@ export class AudioEngine {
 
   /**
    * Initialize the audio context. Must be called after a user gesture (e.g. button press).
-   * On web: uses native browser AudioContext (Tone.js compatible).
-   * On mobile: uses react-native-audio-api.
+   * On web: uses unlockAudio() which unlocks on first touch (Start Vision or Start Music).
    */
   async init(): Promise<void> {
     if (this._initialized) return;
 
-    const audioContext = createAudioContext();
-    if ('resume' in audioContext && typeof audioContext.resume === 'function') {
-      await audioContext.resume();
+    let audioContext: globalThis.AudioContext;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      audioContext = (unlockAudio() || createAudioContext()) as unknown as globalThis.AudioContext;
+    } else {
+      audioContext = createAudioContext();
     }
+
     Tone.setContext(audioContext as unknown as Tone.BaseContext);
 
     this.synth = new Tone.PolySynth(Tone.Synth, {
@@ -52,6 +55,11 @@ export class AudioEngine {
     }).toDestination();
 
     Tone.getTransport().bpm.value = this.bpm;
+
+    if ('resume' in audioContext && typeof audioContext.resume === 'function') {
+      await audioContext.resume();
+    }
+
     this._initialized = true;
   }
 

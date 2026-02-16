@@ -1,11 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 
+import { Platform } from 'react-native';
 import { CameraWithFrames } from './src/components/CameraWithFrames';
 import { ControlPanel } from './src/components/ControlPanel';
 import { AudioEngine } from './src/services/AudioEngine';
 import { DEMO_SEQUENCE } from './src/utils/sampleSequences';
+import { unlockAudio } from './src/utils/audioUnlock';
 import type { NoteSequence } from './src/types';
 
 /**
@@ -19,6 +21,24 @@ export default function App() {
   const [bpm, setBpm] = useState(120);
   const [visionActive, setVisionActive] = useState(false);
   const visionSequenceRef = useRef<NoteSequence | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      unlockAudio();
+      window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('touchend', unlock);
+      window.removeEventListener('click', unlock);
+    };
+    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('touchend', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
+    return () => {
+      window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('touchend', unlock);
+      window.removeEventListener('click', unlock);
+    };
+  }, []);
 
   const getCurrentSequence = useCallback(() => {
     return visionActive && visionSequenceRef.current
@@ -45,6 +65,9 @@ export default function App() {
     }
 
     try {
+      if (Platform.OS === 'web') {
+        unlockAudio(); // Unlock on tap (mobile web)
+      }
       if (!engine.initialized) {
         await engine.init();
       }

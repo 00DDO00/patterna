@@ -25,12 +25,13 @@ export function ControlPanel({
 }: ControlPanelProps) {
   return (
     <View style={[styles.container, disabled && styles.disabled]}>
+      <Text style={styles.hint}>Start Vision, then tap Start Music to hear the pattern</Text>
       <Pressable
         style={[styles.button, isPlaying && styles.buttonActive]}
         onPress={onPlayToggle}
         disabled={disabled}
       >
-        <Text style={styles.buttonText}>{isPlaying ? 'Stop' : 'Start'}</Text>
+        <Text style={styles.buttonText}>{isPlaying ? 'Stop' : 'Start Music'}</Text>
       </Pressable>
 
       <View style={styles.row}>
@@ -85,6 +86,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     padding: 16,
     paddingBottom: 24,
+  },
+  hint: {
+    color: '#888',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   disabled: {
     opacity: 0.6,
