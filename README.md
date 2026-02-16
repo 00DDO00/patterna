@@ -16,6 +16,29 @@ Point your camera at patterned surfaces (bricks, tiles) and hear them as music i
 - [x] Play/Stop, Octave (2–6), BPM (60–200) controls
 - [x] Cross-platform audio via react-native-audio-api
 
+## Phase 2 ✅ — Vision Pipeline (Web)
+
+- [x] Frame capture from camera (web: getUserMedia + canvas)
+- [x] Grayscale conversion
+- [x] Sobel edge detection
+- [x] Edge overlay with processing time display
+- [x] “Start Vision” / “Stop Vision” toggle
+
+## Phase 3 ✅ — Grid Detection
+
+- [x] Line detection via projection (horizontal/vertical peaks)
+- [x] Grid extraction from line intersections
+- [x] Grid overlay (green wireframe)
+- [x] Grid caching for stability
+
+## Phase 4 ✅ — Mapping Engine
+
+- [x] Cell sampling (center region, RGB + brightness)
+- [x] Color clustering → pentatonic notes (C, D, E, G, A)
+- [x] Brightness threshold for active notes
+- [x] Pattern → NoteSequence pipeline
+- [x] Wired to audio when vision + play active
+
 ## Run the app
 
 ```bash
@@ -41,6 +64,6 @@ pattern-to-music/
 └── package.json
 ```
 
-## Next: Phase 2
+## Next: Phase 5–6
 
-Vision pipeline — grayscale conversion and edge detection from camera frames.
+Phase 5: Full integration polish. Phase 6: Motion control (tilt → octave).

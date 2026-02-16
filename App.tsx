@@ -2,21 +2,38 @@ import { useCallback, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 
-import { CameraView } from './src/components/CameraView';
+import { CameraWithFrames } from './src/components/CameraWithFrames';
 import { ControlPanel } from './src/components/ControlPanel';
 import { AudioEngine } from './src/services/AudioEngine';
 import { DEMO_SEQUENCE } from './src/utils/sampleSequences';
+import type { NoteSequence } from './src/types';
 
 /**
  * Pattern-to-Music Step Sequencer
- * Phase 0: Camera view with permissions
- * Phase 1: Standalone audio engine with demo sequence
+ * Phases 0-4: Camera → Vision → Grid → Mapping → Audio
  */
 export default function App() {
   const audioEngineRef = useRef(new AudioEngine());
   const [isPlaying, setIsPlaying] = useState(false);
   const [octave, setOctave] = useState(4);
   const [bpm, setBpm] = useState(120);
+  const [visionActive, setVisionActive] = useState(false);
+  const visionSequenceRef = useRef<NoteSequence | null>(null);
+
+  const getCurrentSequence = useCallback(() => {
+    return visionActive && visionSequenceRef.current
+      ? visionSequenceRef.current
+      : DEMO_SEQUENCE;
+  }, [visionActive]);
+
+  const handleProcessedFrame = useCallback((result: { noteSequence: NoteSequence | null }) => {
+    if (result.noteSequence) {
+      visionSequenceRef.current = result.noteSequence;
+      if (audioEngineRef.current.initialized && audioEngineRef.current.isPlaying) {
+        audioEngineRef.current.updateSequence(result.noteSequence);
+      }
+    }
+  }, []);
 
   const handlePlayToggle = useCallback(async () => {
     const engine = audioEngineRef.current;
@@ -30,29 +47,28 @@ export default function App() {
     try {
       if (!engine.initialized) {
         await engine.init();
-        engine.updateSequence(DEMO_SEQUENCE);
       }
 
       engine.setOctave(octave);
       engine.setBpm(bpm);
-      engine.updateSequence(DEMO_SEQUENCE); // Re-apply with current octave
+      engine.updateSequence(getCurrentSequence());
       engine.start();
       setIsPlaying(true);
     } catch (err) {
       console.error('Failed to start audio:', err);
     }
-  }, [isPlaying, octave, bpm]);
+  }, [isPlaying, octave, bpm, getCurrentSequence]);
 
   const handleOctaveChange = useCallback((delta: number) => {
     setOctave((prev) => {
       const next = Math.max(2, Math.min(6, prev + delta));
       audioEngineRef.current.setOctave(next);
       if (audioEngineRef.current.initialized) {
-        audioEngineRef.current.updateSequence(DEMO_SEQUENCE);
+        audioEngineRef.current.updateSequence(getCurrentSequence());
       }
       return next;
     });
-  }, []);
+  }, [getCurrentSequence]);
 
   const handleBpmChange = useCallback((delta: number) => {
     setBpm((prev) => {
@@ -64,7 +80,12 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} />
+      <CameraWithFrames
+        style={styles.camera}
+        showEdgeOverlay
+        onProcessedFrame={handleProcessedFrame}
+        onVisionActiveChange={setVisionActive}
+      />
       <ControlPanel
         isPlaying={isPlaying}
         octave={octave}
