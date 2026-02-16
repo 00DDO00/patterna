@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { AudioContext } from 'react-native-audio-api';
+import { Platform } from 'react-native';
 import type { NoteSequence } from '../types';
 
 /** Default BPM for the step sequencer */
@@ -10,6 +10,16 @@ const SEQUENCE_STEPS = 16;
 
 /** Subdivision for 16th notes */
 const SUBDIVISION = '16n';
+
+/** Create AudioContext: native browser on web (Tone.js compatible), react-native-audio-api on mobile */
+function createAudioContext(): globalThis.AudioContext {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const AC = globalThis.AudioContext || (globalThis as unknown as { webkitAudioContext: typeof globalThis.AudioContext }).webkitAudioContext;
+    return new AC();
+  }
+  const { AudioContext } = require('react-native-audio-api');
+  return new AudioContext();
+}
 
 /**
  * Audio Engine - 16-step sequencer using Tone.js.
@@ -24,13 +34,16 @@ export class AudioEngine {
 
   /**
    * Initialize the audio context. Must be called after a user gesture (e.g. button press).
-   * Uses react-native-audio-api for cross-platform Web Audio API.
+   * On web: uses native browser AudioContext (Tone.js compatible).
+   * On mobile: uses react-native-audio-api.
    */
   async init(): Promise<void> {
     if (this._initialized) return;
 
-    const audioContext = new AudioContext();
-    await audioContext.resume();
+    const audioContext = createAudioContext();
+    if ('resume' in audioContext && typeof audioContext.resume === 'function') {
+      await audioContext.resume();
+    }
     Tone.setContext(audioContext as unknown as Tone.BaseContext);
 
     this.synth = new Tone.PolySynth(Tone.Synth, {
